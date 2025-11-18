@@ -52,6 +52,10 @@ dependencies:
   # HTTP
   http: ^1.2.0
   
+  # UI Components
+  cached_network_image: ^3.4.1
+  carousel_slider: ^5.0.0
+  
   # Utilities
   package_info_plus: ^8.1.2
   url_launcher: ^6.3.1
