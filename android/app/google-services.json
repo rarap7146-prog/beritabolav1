@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "659950392767",
+    "project_id": "beritabola-8bccc",
+    "storage_bucket": "beritabola-8bccc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:659950392767:android:6d802bd8f5b9ec57a67d0a",
+        "android_client_info": {
+          "package_name": "com.idnkt78.beritabola"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "659950392767-8de2hg2vlpcsfbnhvh4bs63v13kj7cj4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.idnkt78.beritabola",
+            "certificate_hash": "704b4bb422b87f70fd4d50bbfb189f53935e949c"
+          }
+        },
+        {
+          "client_id": "659950392767-per4t7c72icvnf0t2goc67pgtg0l9ooc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.idnkt78.beritabola",
+            "certificate_hash": "dc49ece134f1a34cf3c69d52caa71d95cfd94258"
+          }
+        },
+        {
+          "client_id": "659950392767-jo4icrnifkk8eqg44gtc0o990m8mdt1r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARKiOwIegGMiz5etW-caLu5MHp8feFFms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "659950392767-jo4icrnifkk8eqg44gtc0o990m8mdt1r.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
