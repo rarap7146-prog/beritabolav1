@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'screens/auth/auth_check_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/main_page.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const BeritaBolaApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const BeritaBolaApp(),
+    ),
+  );
 }
 
 class BeritaBolaApp extends StatelessWidget {
@@ -15,6 +23,8 @@ class BeritaBolaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return MaterialApp(
       title: 'Berita Bola',
       debugShowCheckedModeBanner: false,
@@ -34,8 +44,8 @@ class BeritaBolaApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      themeMode: ThemeMode.system,
-      initialRoute: '/login',
+      themeMode: themeProvider.themeMode,
+      home: const AuthCheckScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),

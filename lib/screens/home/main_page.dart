@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../providers/theme_provider.dart';
+import '../profile/about_app_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -125,18 +128,6 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final authService = AuthService();
   bool _isLoading = false;
-
-  String _getInitials(String? displayName, String? email) {
-    if (displayName != null && displayName.trim().isNotEmpty) {
-      String trimmed = displayName.trim();
-      return trimmed.substring(0, 1).toUpperCase();
-    } else if (email != null && email.trim().isNotEmpty) {
-      String trimmed = email.trim();
-      return trimmed.substring(0, 1).toUpperCase();
-    } else {
-      return 'U';
-    }
-  }
 
   Future<void> _linkWithGoogle() async {
     setState(() => _isLoading = true);
@@ -564,43 +555,67 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    child: Text(
-                      _getInitials(user?.displayName, user?.email),
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                  // Theme Selector Card
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Tema',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
+                          Consumer<ThemeProvider>(
+                            builder: (context, themeProvider, _) {
+                              return Row(
+                                children: [
+                                  _CompactThemeButton(
+                                    icon: Icons.light_mode,
+                                    isSelected: themeProvider.themeOption == ThemeOption.light,
+                                    onTap: () => themeProvider.setThemeOption(ThemeOption.light),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _CompactThemeButton(
+                                    icon: Icons.dark_mode,
+                                    isSelected: themeProvider.themeOption == ThemeOption.dark,
+                                    onTap: () => themeProvider.setThemeOption(ThemeOption.dark),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _CompactThemeButton(
+                                    icon: Icons.brightness_auto,
+                                    isSelected: themeProvider.themeOption == ThemeOption.system,
+                                    onTap: () => themeProvider.setThemeOption(ThemeOption.system),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // About App Button
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('Tentang Aplikasi'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AboutAppPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    user?.displayName?.isNotEmpty == true 
-                      ? user!.displayName! 
-                      : (isAnonymous ? 'Pengguna Anonim' : 'Pengguna'),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user?.email?.isNotEmpty == true 
-                      ? user!.email! 
-                      : (isAnonymous ? 'Tidak ada email (Anonim)' : 'Tidak ada email'),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (isAnonymous)
-                    Chip(
-                      label: const Text('Akun Tamu'),
-                      backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                    ),
-                  const SizedBox(height: 40),
                   
                   // Anonymous User - Show Upgrade Account Card
                   if (isAnonymous) ...[
@@ -766,3 +781,47 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
+// Compact Theme Button Widget
+class _CompactThemeButton extends StatelessWidget {
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CompactThemeButton({
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade400,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isSelected
+              ? Colors.white
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade700),
+        ),
+      ),
+    );
+  }
+}
