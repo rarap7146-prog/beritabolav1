@@ -3,4 +3,8 @@
     <!-- Facebook App Configuration -->
     <string name="facebook_app_id">2277533376091905</string>
     <string name="facebook_client_token">b6e38ddd372cf41e48bc41b9c8e3215c</string>
+    
+    <!-- Facebook SDK Settings -->
+    <bool name="facebook_advertiser_id_collection_enabled">true</bool>
+    <bool name="facebook_auto_log_app_events_enabled">true</bool>
 </resources>
