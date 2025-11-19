@@ -52,6 +52,14 @@
             android:name="flutterEmbedding"
             android:value="2" />
         
+        <!-- Facebook App ID -->
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id"/>
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token"/>
+        
         <!-- OneSignal Notification Icons -->
         <meta-data
             android:name="com.onesignal.NotificationOpened.DEFAULT"

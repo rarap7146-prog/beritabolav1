@@ -1,10 +1,8 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:facebook_app_events/facebook_app_events.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 /// Analytics Service
-/// Unified tracking for Firebase Analytics, Facebook App Events, and TikTok Events API
+/// Unified tracking for Firebase Analytics and Facebook App Events
 /// Tracks key events: Login, Register, View Content, and custom events
 class AnalyticsService {
   // Singleton pattern
@@ -14,13 +12,6 @@ class AnalyticsService {
 
   final FirebaseAnalytics _firebaseAnalytics = FirebaseAnalytics.instance;
   final FacebookAppEvents _facebookAppEvents = FacebookAppEvents();
-
-  // TikTok Events API Configuration
-  // Get your TikTok Pixel ID and Access Token from TikTok Events Manager
-  // https://ads.tiktok.com/marketing_api/docs?id=1701890979375106
-  static const String _tiktokPixelId = 'YOUR_TIKTOK_PIXEL_ID'; // TODO: Replace with actual Pixel ID
-  static const String _tiktokAccessToken = 'YOUR_TIKTOK_ACCESS_TOKEN'; // TODO: Replace with actual Access Token
-  static const String _tiktokApiUrl = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 
   bool _isInitialized = false;
 
@@ -44,7 +35,6 @@ class AnalyticsService {
       print('✅ Analytics initialized successfully');
       print('   ✓ Firebase Analytics: Ready');
       print('   ✓ Facebook App Events: Ready');
-      print('   ℹ️ TikTok Events API: Configure pixel ID and access token');
     } catch (e) {
       print('❌ Error initializing Analytics: $e');
     }
@@ -68,15 +58,6 @@ class AnalyticsService {
       await _facebookAppEvents.logEvent(
         name: 'fb_mobile_login',
         parameters: {
-          'method': method,
-          'user_id': userId ?? 'anonymous',
-        },
-      );
-
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'Login',
-        properties: {
           'method': method,
           'user_id': userId ?? 'anonymous',
         },
@@ -111,15 +92,6 @@ class AnalyticsService {
         },
       );
 
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'CompleteRegistration',
-        properties: {
-          'method': method,
-          'user_id': userId ?? 'unknown',
-        },
-      );
-
       print('✅ Registration event tracked successfully');
     } catch (e) {
       print('❌ Error tracking registration: $e');
@@ -146,14 +118,6 @@ class AnalyticsService {
       await _facebookAppEvents.logEvent(
         name: 'user_logout',
         parameters: {
-          'user_id': userId ?? 'anonymous',
-        },
-      );
-
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'UserLogout',
-        properties: {
           'user_id': userId ?? 'anonymous',
         },
       );
@@ -197,17 +161,6 @@ class AnalyticsService {
         },
       );
 
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'ViewContent',
-        properties: {
-          'content_type': contentType,
-          'content_id': contentId,
-          'content_name': contentTitle ?? contentId,
-          'content_category': contentCategory ?? contentType,
-        },
-      );
-
       print('✅ ViewContent event tracked successfully');
     } catch (e) {
       print('❌ Error tracking view content: $e');
@@ -234,15 +187,6 @@ class AnalyticsService {
       await _facebookAppEvents.logEvent(
         name: 'fb_mobile_search',
         parameters: {
-          'search_string': searchTerm,
-          'content_category': searchCategory ?? 'all',
-        },
-      );
-
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'Search',
-        properties: {
           'search_string': searchTerm,
           'content_category': searchCategory ?? 'all',
         },
@@ -280,16 +224,6 @@ class AnalyticsService {
         },
       );
 
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: 'Share',
-        properties: {
-          'content_type': contentType,
-          'content_id': contentId,
-          'method': method,
-        },
-      );
-
       print('✅ Share event tracked successfully');
     } catch (e) {
       print('❌ Error tracking share: $e');
@@ -314,12 +248,6 @@ class AnalyticsService {
       await _facebookAppEvents.logEvent(
         name: eventName,
         parameters: parameters ?? {},
-      );
-
-      // TikTok Events API
-      await _trackTikTokEvent(
-        event: eventName,
-        properties: parameters ?? {},
       );
 
       print('✅ Custom event tracked successfully');
@@ -369,53 +297,6 @@ class AnalyticsService {
       print('✅ User properties set successfully');
     } catch (e) {
       print('❌ Error setting user properties: $e');
-    }
-  }
-
-  /// Track TikTok Event via TikTok Events API
-  /// Documentation: https://ads.tiktok.com/marketing_api/docs?id=1701890979375106
-  Future<void> _trackTikTokEvent({
-    required String event,
-    Map<String, dynamic>? properties,
-  }) async {
-    // Skip if not configured
-    if (_tiktokPixelId == 'YOUR_TIKTOK_PIXEL_ID' || 
-        _tiktokAccessToken == 'YOUR_TIKTOK_ACCESS_TOKEN') {
-      print('⚠️ TikTok Events API not configured. Skipping TikTok tracking.');
-      return;
-    }
-
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      
-      final body = {
-        'pixel_code': _tiktokPixelId,
-        'event': event,
-        'timestamp': timestamp.toString(),
-        'context': {
-          'user_agent': 'BeritaBola/1.0.0 (Flutter)',
-          'ip': '', // Server-side: Get user's IP
-        },
-        'properties': properties ?? {},
-      };
-
-      final response = await http.post(
-        Uri.parse(_tiktokApiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Token': _tiktokAccessToken,
-        },
-        body: json.encode(body),
-      );
-
-      if (response.statusCode == 200) {
-        print('✅ TikTok event tracked: $event');
-      } else {
-        print('⚠️ TikTok tracking failed: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('❌ Error tracking TikTok event: $e');
-      // Don't rethrow - analytics should not crash the app
     }
   }
 
