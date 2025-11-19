@@ -24,9 +24,7 @@ class WordPressService {
       } else {
         throw Exception('Failed to load featured articles: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Error fetching featured articles: $e');
-      rethrow;
+    } catch (e) {      rethrow;
     }
   }
 
@@ -49,9 +47,7 @@ class WordPressService {
       } else {
         throw Exception('Failed to load articles for category $categoryId: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Error fetching articles for category $categoryId: $e');
-      rethrow;
+    } catch (e) {      rethrow;
     }
   }
 
@@ -76,9 +72,7 @@ class WordPressService {
       } else {
         throw Exception('Failed to load latest articles: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Error fetching latest articles: $e');
-      rethrow;
+    } catch (e) {      rethrow;
     }
   }
 
@@ -96,9 +90,7 @@ class WordPressService {
       } else {
         throw Exception('Failed to load article: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Error fetching article $articleId: $e');
-      rethrow;
+    } catch (e) {      rethrow;
     }
   }
 
@@ -116,9 +108,7 @@ class WordPressService {
       } else {
         return 'Category $categoryId';
       }
-    } catch (e) {
-      print('Error fetching category name: $e');
-      return 'Category $categoryId';
+    } catch (e) {      return 'Category $categoryId';
     }
   }
 
@@ -139,9 +129,7 @@ class WordPressService {
           categoryMap[category['id']] = category['name'];
         }
       }
-    } catch (e) {
-      print('Error fetching category names: $e');
-    }
+    } catch (e) {    }
 
     // Fill missing with fallback
     for (int id in categoryIds) {

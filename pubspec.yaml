@@ -55,10 +55,15 @@ dependencies:
   # UI Components
   cached_network_image: ^3.4.1
   carousel_slider: ^5.0.0
+  flutter_widget_from_html: ^0.15.2
+  youtube_player_flutter: ^9.1.1
   
   # Utilities
   package_info_plus: ^8.1.2
   url_launcher: ^6.3.1
+  share_plus: ^10.1.2
+  logger: ^2.4.0
+  intl: ^0.20.1
 
 dev_dependencies:
   flutter_test:

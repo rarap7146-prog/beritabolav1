@@ -113,42 +113,42 @@ class _FeaturedArticlesCarouselState extends State<FeaturedArticlesCarousel> {
                       child: const Icon(Icons.image, size: 50),
                     ),
               
-              // Gradient overlay for text readability
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
-                    stops: const [0.5, 1.0],
-                  ),
-                ),
-              ),
-              
-              // Title overlay at bottom
+              // Gradient overlay for text readability (blue to transparent)
               Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Text(
-                  article.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black45,
-                        offset: Offset(0, 1),
-                        blurRadius: 3,
-                      ),
-                    ],
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withOpacity(0.95),
+                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  child: Text(
+                    article.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ],

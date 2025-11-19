@@ -6,13 +6,19 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/main_page.dart';
 import 'providers/theme_provider.dart';
+import 'providers/article_provider.dart';
+import 'providers/football_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ArticleProvider()),
+        ChangeNotifierProvider(create: (_) => FootballProvider()),
+      ],
       child: const BeritaBolaApp(),
     ),
   );

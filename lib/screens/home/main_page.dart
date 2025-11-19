@@ -2,7 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/article_provider.dart';
+import '../../providers/football_provider.dart';
+import '../../widgets/featured_articles_carousel.dart';
+import '../../widgets/netflix_style_category_list.dart';
+import '../../widgets/match_card.dart';
+import '../../widgets/league_card.dart';
 import '../profile/about_app_page.dart';
+import '../articles/view_more_articles_screen.dart';
+import '../articles/article_detail_screen.dart';
+import '../sports/league_detail_screen.dart';
+import '../sports/match_detail_screen.dart';
+import '../sports/fixtures_screen.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -38,7 +49,7 @@ class _MainPageState extends State<MainPage> {
           NavigationDestination(
             icon: Icon(Icons.sports_soccer_outlined),
             selectedIcon: Icon(Icons.sports_soccer),
-            label: 'Olahraga',
+            label: 'Pertandingan',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -52,65 +63,513 @@ class _MainPageState extends State<MainPage> {
 }
 
 // News Page
-class NewsPage extends StatelessWidget {
+class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
+
+  @override
+  State<NewsPage> createState() => _NewsPageState();
+}
+
+class _NewsPageState extends State<NewsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize articles on first load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<ArticleProvider>(context, listen: false);
+      provider.initialize();
+    });
+  }
+
+  Future<void> _refreshData() async {
+    final provider = Provider.of<ArticleProvider>(context, listen: false);
+    await provider.refreshAll();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Berita Bola'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        title: Row(
           children: [
-            Text(
-              'Berita',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            ClipOval(
+              child: Image.asset(
+                'assets/launcher/play_store_512.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Berita dan artikel sepak bola',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            const SizedBox(width: 12),
+            const Text('Berita Bola'),
           ],
         ),
+        centerTitle: false,
+      ),
+      body: Consumer<ArticleProvider>(
+        builder: (context, provider, child) {
+          // Show loading on first load
+          if (provider.featuredLoading && 
+              provider.featuredArticles.isEmpty &&
+              provider.categoryArticles.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refreshData,
+            child: ListView(
+              children: [
+                const SizedBox(height: 16),
+                
+                // Featured Articles Carousel
+                if (provider.featuredArticles.isNotEmpty)
+                  FeaturedArticlesCarousel(
+                    articles: provider.featuredArticles,
+                    onArticleTap: (article) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ArticleDetailScreen(article: article),
+                        ),
+                      );
+                    },
+                  ),
+                
+                const SizedBox(height: 24),
+                
+                // Category Lists (Netflix-style)
+                ...ArticleProvider.categoryIds.map((categoryId) {
+                  final articles = provider.categoryArticles[categoryId] ?? [];
+                  
+                  if (articles.isEmpty && !provider.categoryLoading(categoryId)) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  if (provider.categoryLoading(categoryId) && articles.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: FutureBuilder<String>(
+                      future: provider.getCategoryName(categoryId),
+                      builder: (context, snapshot) {
+                        final categoryName = snapshot.data ?? 'Kategori $categoryId';
+                        
+                        return NetflixStyleCategoryList(
+                          categoryName: categoryName,
+                          articles: articles,
+                          articleStats: provider.articleStats,
+                          onArticleTap: (article) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ArticleDetailScreen(article: article),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
+                
+                const SizedBox(height: 16),
+                
+                // View More Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ViewMoreArticlesScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Lihat Semua Berita'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
 // Sports Page
-class SportsPage extends StatelessWidget {
+class SportsPage extends StatefulWidget {
   const SportsPage({super.key});
 
   @override
+  State<SportsPage> createState() => _SportsPageState();
+}
+
+class _SportsPageState extends State<SportsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Only load live matches on initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<FootballProvider>(context, listen: false);
+      provider.fetchLiveFixtures();
+    });
+  }
+
+  Future<void> _refreshData() async {
+    final provider = Provider.of<FootballProvider>(context, listen: false);
+    await provider.fetchLiveFixtures();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Skor Langsung'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        title: Row(
           children: [
-            Text(
-              'Skor Langsung',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            ClipOval(
+              child: Image.asset(
+                'assets/launcher/play_store_512.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Skor pertandingan dan pembaruan langsung',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            const SizedBox(width: 12),
+            const Text('Pertandingan'),
           ],
+        ),
+        centerTitle: false,
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: Consumer<FootballProvider>(
+          builder: (context, provider, child) {
+            final hasLive = provider.liveFixtures.isNotEmpty;
+            final isLoading = provider.isLoadingLive;
+
+            return Column(
+              children: [
+                // Match Feed (scrollable)
+                Expanded(
+                  child: CustomScrollView(
+                    slivers: [
+                      // Live Matches Section
+                      if (hasLive) ...[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'LIVE',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final fixture = provider.liveFixtures[index];
+                              return MatchCard(
+                                fixture: fixture,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MatchDetailScreen(
+                                        fixture: fixture,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            childCount: provider.liveFixtures.length,
+                          ),
+                        ),
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 16),
+                        ),
+                      ],
+
+                      // Quick Access Buttons
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            'Jadwal Pertandingan',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            children: [
+                              _buildFixtureButton(
+                                context,
+                                'Hari Ini',
+                                'Lihat semua pertandingan hari ini',
+                                Icons.today,
+                                Colors.blue,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FixturesScreen(
+                                        title: 'Pertandingan Hari Ini',
+                                        dateOffset: 0,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              _buildFixtureButton(
+                                context,
+                                'Besok',
+                                'Lihat pertandingan besok',
+                                Icons.event,
+                                Colors.orange,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FixturesScreen(
+                                        title: 'Pertandingan Besok',
+                                        dateOffset: 1,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              _buildFixtureButton(
+                                context,
+                                'Semua Jadwal',
+                                'Lihat jadwal lengkap (7 hari ke depan)',
+                                Icons.calendar_month,
+                                Colors.green,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FixturesScreen(
+                                        title: 'Jadwal 7 Hari',
+                                        dateOffset: -1, // -1 means load all
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Loading indicator
+                      if (isLoading && !hasLive)
+                        const SliverFillRemaining(
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+
+                      // Empty state
+                      if (!isLoading && !hasLive)
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.sports_soccer,
+                                  size: 64,
+                                  color: Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Tidak ada pertandingan live',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Cek jadwal di bawah atau pilih liga favorit',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // Bottom padding for league section
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 100),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // League Quick Access (compact chip style at bottom)
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Text(
+                          'Liga',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 50,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: LeagueConfig.allLeagues.length,
+                          itemBuilder: (context, index) {
+                            final league = LeagueConfig.allLeagues[index];
+                            return LeagueCard(
+                              leagueId: league.id,
+                              name: league.name,
+                              logo: league.logo,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LeagueDetailScreen(
+                                      leagueId: league.id,
+                                      leagueName: league.name,
+                                      season: league.season,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFixtureButton(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -534,8 +993,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
-        centerTitle: true,
+        title: Row(
+          children: [
+            ClipOval(
+              child: Image.asset(
+                'assets/launcher/play_store_512.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Profil'),
+          ],
+        ),
+        centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

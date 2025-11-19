@@ -8,6 +8,7 @@ class ArticleModel {
   final List<int> categoryIds;
   final bool isSticky;
   final int authorId;
+  final String? authorName;
 
   ArticleModel({
     required this.id,
@@ -19,21 +20,34 @@ class ArticleModel {
     required this.categoryIds,
     required this.isSticky,
     required this.authorId,
+    this.authorName,
   });
 
   /// Parse from WordPress REST API JSON
   /// Expects _embed parameter for featured image
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
     String? thumbnailUrl;
+    String? authorName;
     
-    // Extract featured image from _embedded data
+    // Extract featured image and author from _embedded data
     if (json['_embedded'] != null) {
       final embedded = json['_embedded'] as Map<String, dynamic>;
+      
+      // Extract featured image
       if (embedded.containsKey('wp:featuredmedia')) {
         final media = embedded['wp:featuredmedia'] as List;
         if (media.isNotEmpty) {
           final mediaItem = media[0] as Map<String, dynamic>;
           thumbnailUrl = mediaItem['source_url'] as String?;
+        }
+      }
+      
+      // Extract author name
+      if (embedded.containsKey('author')) {
+        final authors = embedded['author'] as List;
+        if (authors.isNotEmpty) {
+          final authorItem = authors[0] as Map<String, dynamic>;
+          authorName = authorItem['name'] as String?;
         }
       }
     }
@@ -56,6 +70,7 @@ class ArticleModel {
       categoryIds: categoryIds,
       isSticky: json['sticky'] as bool? ?? false,
       authorId: json['author'] as int,
+      authorName: authorName,
     );
   }
 
@@ -71,6 +86,7 @@ class ArticleModel {
       'categoryIds': categoryIds,
       'isSticky': isSticky,
       'authorId': authorId,
+      'authorName': authorName,
     };
   }
 
@@ -105,6 +121,9 @@ class ArticleModel {
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
+
+  /// Get formatted date (alias for formattedDateFull)
+  String get formattedDate => formattedDateFull;
 
   /// Copy with method for immutability
   ArticleModel copyWith({

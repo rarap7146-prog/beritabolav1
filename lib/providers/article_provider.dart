@@ -65,9 +65,7 @@ class ArticleProvider with ChangeNotifier {
       await _loadStatsForArticles(_featuredArticles);
       
       _featuredError = null;
-    } catch (e) {
-      print('Error loading featured articles: $e');
-      _featuredError = 'Gagal memuat artikel unggulan';
+    } catch (e) {      _featuredError = 'Gagal memuat artikel unggulan';
     } finally {
       _featuredLoading = false;
       notifyListeners();
@@ -94,9 +92,7 @@ class ArticleProvider with ChangeNotifier {
       await _loadStatsForArticles(articles);
       
       _categoryErrors[categoryId] = null;
-    } catch (e) {
-      print('Error loading category $categoryId articles: $e');
-      _categoryErrors[categoryId] = 'Gagal memuat artikel';
+    } catch (e) {      _categoryErrors[categoryId] = 'Gagal memuat artikel';
     } finally {
       _categoryLoading[categoryId] = false;
       notifyListeners();
@@ -144,9 +140,7 @@ class ArticleProvider with ChangeNotifier {
       }
 
       _latestError = null;
-    } catch (e) {
-      print('Error loading latest articles: $e');
-      _latestError = 'Gagal memuat artikel';
+    } catch (e) {      _latestError = 'Gagal memuat artikel';
     } finally {
       _latestLoading = false;
       notifyListeners();
@@ -161,9 +155,7 @@ class ArticleProvider with ChangeNotifier {
       try {
         final stats = await _firestoreService.getArticleStats(article.id);
         _articleStats[article.id] = stats;
-      } catch (e) {
-        print('Error loading stats for article ${article.id}: $e');
-        _articleStats[article.id] = {'views': 0, 'likes': 0, 'comments': 0};
+      } catch (e) {        _articleStats[article.id] = {'views': 0, 'likes': 0, 'comments': 0};
       }
     }
   }
@@ -174,14 +166,13 @@ class ArticleProvider with ChangeNotifier {
   }
 
   /// Refresh stats for an article (after like/comment)
-  Future<void> refreshArticleStats(int articleId) async {
+  Future<void> refreshArticleStats(dynamic articleId) async {
     try {
-      final stats = await _firestoreService.getArticleStats(articleId);
-      _articleStats[articleId] = stats;
+      final id = articleId is String ? int.parse(articleId) : articleId as int;
+      final stats = await _firestoreService.getArticleStats(id);
+      _articleStats[id] = stats;
       notifyListeners();
-    } catch (e) {
-      print('Error refreshing stats for article $articleId: $e');
-    }
+    } catch (e) {    }
   }
 
   // ==================== CATEGORY NAMES ====================
@@ -191,14 +182,23 @@ class ArticleProvider with ChangeNotifier {
     try {
       _categoryNames = await _wordpressService.fetchCategoryNames(categoryIds);
       notifyListeners();
-    } catch (e) {
-      print('Error loading category names: $e');
-    }
+    } catch (e) {    }
   }
 
-  /// Get category name by ID
-  String getCategoryName(int categoryId) {
-    return _categoryNames[categoryId] ?? 'Kategori $categoryId';
+  /// Get category name by ID (fetches from API if not cached)
+  Future<String> getCategoryName(int categoryId) async {
+    // Return from cache if available
+    if (_categoryNames.containsKey(categoryId)) {
+      return _categoryNames[categoryId]!;
+    }
+    
+    // Fetch from API if not in cache
+    try {
+      final name = await _wordpressService.getCategoryName(categoryId);
+      _categoryNames[categoryId] = name;
+      return name;
+    } catch (e) {      return 'Kategori $categoryId';
+    }
   }
 
   // ==================== INITIALIZATION ====================

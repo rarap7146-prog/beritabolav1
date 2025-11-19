@@ -36,7 +36,6 @@ class FirestoreService {
 
       return {'views': 0, 'likes': 0, 'comments': 0};
     } catch (e) {
-      print('Error getting article stats: $e');
       return {'views': 0, 'likes': 0, 'comments': 0};
     }
   }
@@ -68,7 +67,7 @@ class FirestoreService {
         }
       });
     } catch (e) {
-      print('Error incrementing view count: $e');
+      // Silent fail for view increment
     }
   }
 
@@ -128,27 +127,23 @@ class FirestoreService {
         }
       });
     } catch (e) {
-      print('Error toggling like: $e');
       rethrow;
     }
   }
 
   /// Check if user has liked an article
-  Future<bool> hasUserLikedArticle(int articleId) async {
+  Future<bool> hasUserLikedArticle(String articleId, String userId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return false;
-
       final doc = await _firestore
           .collection(_userInteractionsCollection)
-          .doc(user.uid)
+          .doc(userId)
           .collection('liked_articles')
-          .doc(articleId.toString())
+          .doc(articleId)
           .get();
 
       return doc.exists;
     } catch (e) {
-      print('Error checking like status: $e');
+
       return false;
     }
   }
@@ -193,7 +188,7 @@ class FirestoreService {
 
       return docRef.id;
     } catch (e) {
-      print('Error posting comment: $e');
+
       rethrow;
     }
   }
@@ -230,7 +225,7 @@ class FirestoreService {
         return data;
       }).toList();
     } catch (e) {
-      print('Error fetching comments: $e');
+
       return [];
     }
   }
@@ -261,7 +256,7 @@ class FirestoreService {
       // Decrement comment count
       await _decrementCommentCount(data['articleId'] as int);
     } catch (e) {
-      print('Error deleting comment: $e');
+
       rethrow;
     }
   }
@@ -303,5 +298,89 @@ class FirestoreService {
       'comments': FieldValue.increment(-1),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  // ==================== ARTICLE DETAIL METHODS ====================
+
+  /// Increment article views (alias for incrementViewCount)
+  Future<void> incrementArticleViews(String articleId) async {
+    return incrementViewCount(int.parse(articleId));
+  }
+
+  /// Like an article
+  Future<void> likeArticle(String articleId, String userId) async {
+    try {
+      final interactionDoc = _firestore
+          .collection(_userInteractionsCollection)
+          .doc(userId)
+          .collection('liked_articles')
+          .doc(articleId);
+
+      final statsDoc = _firestore
+          .collection(_articleStatsCollection)
+          .doc(articleId);
+
+      await _firestore.runTransaction((transaction) async {
+        // IMPORTANT: All reads must happen BEFORE any writes
+        final statsSnapshot = await transaction.get(statsDoc);
+        
+        // Now do all writes
+        transaction.set(interactionDoc, {
+          'articleId': int.parse(articleId),
+          'likedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (statsSnapshot.exists) {
+          transaction.update(statsDoc, {
+            'likes': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          transaction.set(statsDoc, {
+            'articleId': int.parse(articleId),
+            'views': 0,
+            'likes': 1,
+            'comments': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Unlike an article
+  Future<void> unlikeArticle(String articleId, String userId) async {
+    try {
+      final interactionDoc = _firestore
+          .collection(_userInteractionsCollection)
+          .doc(userId)
+          .collection('liked_articles')
+          .doc(articleId);
+
+      final statsDoc = _firestore
+          .collection(_articleStatsCollection)
+          .doc(articleId);
+
+      await _firestore.runTransaction((transaction) async {
+        // IMPORTANT: All reads must happen BEFORE any writes
+        final statsSnapshot = await transaction.get(statsDoc);
+        
+        // Now do all writes
+        transaction.delete(interactionDoc);
+
+        if (statsSnapshot.exists) {
+          transaction.update(statsDoc, {
+            'likes': FieldValue.increment(-1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+        // If stats don't exist, just delete the interaction (silent fail for stats)
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 }
