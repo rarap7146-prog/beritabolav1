@@ -44,3 +44,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Google Play Services - Advertising ID (Required for Facebook App Events)
+    implementation("com.google.android.gms:play-services-ads-identifier:18.1.0")
+}
