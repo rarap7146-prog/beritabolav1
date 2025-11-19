@@ -10,6 +10,7 @@ import '../../models/article_model.dart';
 import '../../providers/article_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/analytics_service.dart';
 import '../../widgets/comment_section.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class ArticleDetailScreen extends StatefulWidget {
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   final _firestoreService = FirestoreService();
   final _authService = AuthService();
+  final _analytics = AnalyticsService();
   bool _isLiked = false;
   bool _isLoadingLike = false;
   String? _categoryName;
@@ -40,6 +42,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   Future<void> _initializeArticle() async {
     // Increment view count
     await _firestoreService.incrementArticleViews(widget.article.id.toString());
+
+    // Track view content event
+    await _analytics.trackViewContent(
+      contentType: 'article',
+      contentId: widget.article.id.toString(),
+      contentTitle: widget.article.title,
+      contentCategory: _categoryName ?? 'news',
+    );
 
     // Refresh stats to show updated view count
     final provider = Provider.of<ArticleProvider>(context, listen: false);
@@ -150,6 +160,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
   void _shareArticle() {
     final url = 'https://beritabola.app/?p=${widget.article.id}';
+    
+    // Track share event
+    _analytics.trackShare(
+      contentType: 'article',
+      contentId: widget.article.id.toString(),
+      method: 'native_share',
+    );
+    
     Share.share(
       '${widget.article.title}\n\n$url',
       subject: widget.article.title,

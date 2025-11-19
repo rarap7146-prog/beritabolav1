@@ -10,12 +10,16 @@ import 'providers/article_provider.dart';
 import 'providers/football_provider.dart';
 import 'services/deep_link_service.dart';
 import 'services/onesignal_service.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase
   await Firebase.initializeApp();
+  
+  // Initialize Analytics (Firebase Analytics, Facebook App Events, TikTok)
+  await AnalyticsService().initialize();
   
   // Initialize OneSignal (after Firebase)
   await OneSignalService().initialize();

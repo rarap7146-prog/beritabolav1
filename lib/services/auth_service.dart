@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'onesignal_service.dart';
+import 'analytics_service.dart';
 
 class AuthService {
   // Singleton pattern
@@ -13,6 +14,7 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final OneSignalService _oneSignal = OneSignalService();
+  final AnalyticsService _analytics = AnalyticsService();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -40,6 +42,12 @@ class AuthService {
 
       // Set OneSignal external user ID
       await _oneSignal.setExternalUserId(credential.user!.uid);
+
+      // Track registration event
+      await _analytics.trackRegistration(
+        method: 'email',
+        userId: credential.user!.uid,
+      );
 
       return {
         'success': true,
@@ -77,6 +85,12 @@ class AuthService {
       if (!credential.user!.isAnonymous) {
         await _oneSignal.setExternalUserId(credential.user!.uid);
       }
+
+      // Track login event
+      await _analytics.trackLogin(
+        method: 'email',
+        userId: credential.user!.uid,
+      );
 
       return {
         'success': true,
@@ -127,6 +141,20 @@ class AuthService {
       // Set OneSignal external user ID
       await _oneSignal.setExternalUserId(userCredential.user!.uid);
 
+      // Track login/registration event
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+      if (isNewUser) {
+        await _analytics.trackRegistration(
+          method: 'google',
+          userId: userCredential.user!.uid,
+        );
+      } else {
+        await _analytics.trackLogin(
+          method: 'google',
+          userId: userCredential.user!.uid,
+        );
+      }
+
       return {
         'success': true,
         'user': userCredential.user,
@@ -147,6 +175,12 @@ class AuthService {
 
       // Create Firestore user document
       await _createUserDocument(credential.user!);
+
+      // Track anonymous login
+      await _analytics.trackLogin(
+        method: 'anonymous',
+        userId: credential.user!.uid,
+      );
 
       return {
         'success': true,
@@ -335,6 +369,13 @@ class AuthService {
   /// Logout
   Future<void> logout() async {
     try {
+      final userId = _auth.currentUser?.uid;
+      
+      // Track logout event before signing out
+      if (userId != null) {
+        await _analytics.trackLogout(userId: userId);
+      }
+      
       // Remove OneSignal external user ID
       await _oneSignal.removeExternalUserId();
       
