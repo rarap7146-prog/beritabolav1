@@ -32,8 +32,12 @@ class AnalyticsService {
       await _facebookAppEvents.setAdvertiserTracking(enabled: true);
       await _facebookAppEvents.setAutoLogAppEventsEnabled(true);
       
+      print('   → Facebook: setAdvertiserTracking(true)');
+      print('   → Facebook: setAutoLogAppEventsEnabled(true)');
+      
       // Flush events immediately (for testing)
       await _facebookAppEvents.flush();
+      print('   → Facebook: flush() called');
 
       _isInitialized = true;
       print('✅ Analytics initialized successfully');
@@ -58,14 +62,16 @@ class AnalyticsService {
         await _firebaseAnalytics.setUserId(id: userId);
       }
 
-      // Facebook App Events - Track as app activation/open
+      // Facebook App Events - Login (Standard Event)
       await _facebookAppEvents.logEvent(
-        name: 'fb_mobile_activate_app',
+        name: 'fb_mobile_login',
         parameters: {
           'fb_mobile_login_method': method,
         },
       );
-      await _facebookAppEvents.flush(); // Send immediately
+      print('   → Facebook: Logged fb_mobile_login event');
+      await _facebookAppEvents.flush();
+      print('   → Facebook: Events flushed');
 
       print('✅ Login event tracked successfully');
     } catch (e) {
@@ -87,14 +93,15 @@ class AnalyticsService {
         await _firebaseAnalytics.setUserId(id: userId);
       }
 
-      // Facebook App Events - Standard CompleteRegistration event
+      // Facebook App Events - CompleteRegistration (Standard Event)
       await _facebookAppEvents.logEvent(
-        name: 'fb_mobile_complete_registration',
+        name: 'CompleteRegistration',
         parameters: {
           'fb_registration_method': method,
+          'fb_content_id': userId ?? 'unknown',
         },
       );
-      await _facebookAppEvents.flush(); // Send immediately
+      await _facebookAppEvents.flush();
 
       print('✅ Registration event tracked successfully');
     } catch (e) {
@@ -154,17 +161,18 @@ class AnalyticsService {
         currency: 'IDR',
       );
 
-      // Facebook App Events
+      // Facebook App Events - ViewContent (Standard Event)
       await _facebookAppEvents.logEvent(
-        name: 'fb_mobile_content_view',
+        name: 'ViewContent',
         parameters: {
-          'content_type': contentType,
-          'content_id': contentId,
-          'content_name': contentTitle ?? contentId,
-          'content_category': contentCategory ?? contentType,
+          'fb_content_type': contentType,
+          'fb_content_id': contentId,
+          'fb_content': contentTitle ?? contentId,
         },
       );
-      await _facebookAppEvents.flush(); // Send immediately
+      print('   → Facebook: Logged ViewContent event');
+      await _facebookAppEvents.flush();
+      print('   → Facebook: Events flushed');
 
       print('✅ ViewContent event tracked successfully');
     } catch (e) {
@@ -300,6 +308,49 @@ class AnalyticsService {
       print('✅ User properties set successfully');
     } catch (e) {
       print('❌ Error setting user properties: $e');
+    }
+  }
+
+  /// Track app install / first open
+  Future<void> trackAppInstall() async {
+    try {
+      print('📊 Tracking App Install (First Open)');
+
+      // Firebase Analytics - log app open
+      await _firebaseAnalytics.logAppOpen();
+
+      // Facebook App Events - App Install (Standard Event)
+      await _facebookAppEvents.logEvent(
+        name: 'fb_mobile_activate_app',
+        parameters: {
+          'fb_app_events_user_agent': 'beritabola_flutter',
+        },
+      );
+      await _facebookAppEvents.flush();
+
+      print('✅ App Install/First Open tracked successfully');
+    } catch (e) {
+      print('❌ Error tracking app install: $e');
+    }
+  }
+
+  /// Track screen view
+  Future<void> trackScreenView({
+    required String screenName,
+    String? screenClass,
+  }) async {
+    try {
+      print('📊 Tracking Screen View: $screenName');
+
+      // Firebase Analytics
+      await _firebaseAnalytics.logScreenView(
+        screenName: screenName,
+        screenClass: screenClass ?? screenName,
+      );
+
+      print('✅ Screen view tracked: $screenName');
+    } catch (e) {
+      print('❌ Error tracking screen view: $e');
     }
   }
 

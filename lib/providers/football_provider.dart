@@ -1,17 +1,26 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:beritabola/models/fixture_model.dart';
 import 'package:beritabola/models/standing_model.dart';
 import 'package:beritabola/services/football_api_service.dart';
+import 'package:beritabola/services/football_websocket_service.dart';
 
 /// Football Provider - State management for football matches and leagues
 class FootballProvider with ChangeNotifier {
   final FootballApiService _api = FootballApiService();
+  final FootballWebSocketService _websocket = FootballWebSocketService();
 
+  StreamSubscription? _websocketEventSubscription;
+  StreamSubscription? _connectionStatusSubscription;
+  Timer? _liveMatchRefreshTimer;
+  
   // State variables
   bool _isLoadingLive = false;
   bool _isLoadingToday = false;
   bool _isLoadingUpcoming = false;
+  bool _isRefreshingLive = false; // For auto-refresh animation
   String? _error;
+  ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
 
   List<FixtureModel> _liveFixtures = [];
   List<FixtureModel> _todayFixtures = [];
@@ -22,17 +31,24 @@ class FootballProvider with ChangeNotifier {
   bool get isLoadingLive => _isLoadingLive;
   bool get isLoadingToday => _isLoadingToday;
   bool get isLoadingUpcoming => _isLoadingUpcoming;
+  bool get isRefreshingLive => _isRefreshingLive; // For showing refresh animation
   String? get error => _error;
   List<FixtureModel> get liveFixtures => _liveFixtures;
   List<FixtureModel> get todayFixtures => _todayFixtures;
   List<FixtureModel> get upcomingFixtures => _upcomingFixtures;
+  ConnectionStatus get connectionStatus => _connectionStatus;
+  bool get isWebSocketConnected => _connectionStatus == ConnectionStatus.connected;
 
   /// Get standings for a specific league
   List<StandingModel>? getStandings(int leagueId) => _standings[leagueId];
 
   /// Fetch live fixtures
-  Future<void> fetchLiveFixtures() async {
-    _isLoadingLive = true;
+  Future<void> fetchLiveFixtures({bool isAutoRefresh = false}) async {
+    if (isAutoRefresh) {
+      _isRefreshingLive = true;
+    } else {
+      _isLoadingLive = true;
+    }
     _error = null;
     notifyListeners();
 
@@ -46,9 +62,15 @@ class FootballProvider with ChangeNotifier {
             .map((json) => FixtureModel.fromJson(json as Map<String, dynamic>))
             .toList();
         print('💡 Fetched $results live fixtures');
+        
+        // Start auto-refresh timer if we have live matches
+        _startLiveMatchRefreshTimer();
       } else {
         _liveFixtures = [];
         print('💡 No live fixtures available');
+        
+        // Stop timer if no live matches
+        _stopLiveMatchRefreshTimer();
       }
     } catch (e) {
       _error = 'Failed to load live matches';
@@ -56,7 +78,32 @@ class FootballProvider with ChangeNotifier {
       _liveFixtures = [];
     } finally {
       _isLoadingLive = false;
+      _isRefreshingLive = false;
       notifyListeners();
+    }
+  }
+  
+  /// Start auto-refresh timer for live matches (15 seconds interval)
+  void _startLiveMatchRefreshTimer() {
+    // Cancel existing timer if any
+    _liveMatchRefreshTimer?.cancel();
+    
+    print('⏰ Starting live match auto-refresh timer (15s interval)');
+    _liveMatchRefreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+      // Only refresh if we have live matches and not already loading
+      if (_liveFixtures.isNotEmpty && !_isLoadingLive) {
+        print('🔄 Auto-refreshing live matches...');
+        await fetchLiveFixtures(isAutoRefresh: true);
+      }
+    });
+  }
+  
+  /// Stop auto-refresh timer
+  void _stopLiveMatchRefreshTimer() {
+    if (_liveMatchRefreshTimer != null) {
+      print('⏰ Stopping live match auto-refresh timer');
+      _liveMatchRefreshTimer?.cancel();
+      _liveMatchRefreshTimer = null;
     }
   }
 
@@ -523,11 +570,216 @@ class FootballProvider with ChangeNotifier {
         return squad ?? [];
       }
       
-      print('⚠️ No squad data found');
+      print('⚠️ No team squad found');
       return [];
     } catch (e) {
       print('❌ Error fetching team squad: $e');
       return [];
     }
+  }
+
+  /// Initialize WebSocket for real-time updates
+  Future<void> initializeWebSocket() async {
+    try {
+      print('⚡ Initializing WebSocket for real-time updates...');
+      
+      // Connect to WebSocket
+      await _websocket.connect();
+      
+      // Listen to connection status changes
+      _connectionStatusSubscription = _websocket.connectionStatus.listen((status) {
+        _connectionStatus = status;
+        notifyListeners();
+        
+        if (status == ConnectionStatus.connected) {
+          print('✅ WebSocket connected - subscribing to live matches');
+          // Subscribe to all live matches when connected
+          _websocket.subscribeToAllLive();
+        }
+      });
+      
+      // Listen to real-time events
+      _websocketEventSubscription = _websocket.events.listen((event) {
+        _handleWebSocketEvent(event);
+      });
+      
+      print('✅ WebSocket initialized successfully');
+    } catch (e) {
+      print('❌ Error initializing WebSocket: $e');
+    }
+  }
+
+  /// Handle real-time WebSocket events
+  void _handleWebSocketEvent(Map<String, dynamic> event) {
+    try {
+      final eventType = event['type'] as String?;
+      final fixtureId = event['fixture'] as int?;
+      
+      if (fixtureId == null) return;
+
+      print('⚡ Real-time event: $eventType for fixture $fixtureId');
+
+      // Find the fixture in our lists
+      final liveIndex = _liveFixtures.indexWhere((f) => f.id == fixtureId);
+      final todayIndex = _todayFixtures.indexWhere((f) => f.id == fixtureId);
+
+      if (eventType == 'status') {
+        // Match status update (halftime, finished, etc.)
+        final statusShort = event['status'] as String?;
+        final elapsed = event['elapsed'] as int?;
+        
+        if (liveIndex != -1 && statusShort != null) {
+          // Update status in-place by rebuilding the fixture
+          final oldFixture = _liveFixtures[liveIndex];
+          _liveFixtures[liveIndex] = FixtureModel(
+            id: oldFixture.id,
+            referee: oldFixture.referee,
+            date: oldFixture.date,
+            timestamp: oldFixture.timestamp,
+            venue: oldFixture.venue,
+            city: oldFixture.city,
+            status: FixtureStatus(
+              long: _mapStatusShortToLong(statusShort),
+              short: statusShort,
+              elapsed: elapsed,
+            ),
+            league: oldFixture.league,
+            homeTeam: oldFixture.homeTeam,
+            awayTeam: oldFixture.awayTeam,
+            homeGoals: oldFixture.homeGoals,
+            awayGoals: oldFixture.awayGoals,
+            halftimeHome: oldFixture.halftimeHome,
+            halftimeAway: oldFixture.halftimeAway,
+          );
+        }
+        if (todayIndex != -1 && statusShort != null) {
+          final oldFixture = _todayFixtures[todayIndex];
+          _todayFixtures[todayIndex] = FixtureModel(
+            id: oldFixture.id,
+            referee: oldFixture.referee,
+            date: oldFixture.date,
+            timestamp: oldFixture.timestamp,
+            venue: oldFixture.venue,
+            city: oldFixture.city,
+            status: FixtureStatus(
+              long: _mapStatusShortToLong(statusShort),
+              short: statusShort,
+              elapsed: elapsed,
+            ),
+            league: oldFixture.league,
+            homeTeam: oldFixture.homeTeam,
+            awayTeam: oldFixture.awayTeam,
+            homeGoals: oldFixture.homeGoals,
+            awayGoals: oldFixture.awayGoals,
+            halftimeHome: oldFixture.halftimeHome,
+            halftimeAway: oldFixture.halftimeAway,
+          );
+        }
+        
+        notifyListeners();
+        print('📊 Updated match status: $statusShort (${elapsed ?? 0}\')');
+      } else if (eventType == 'event') {
+        // Match event (goal, card, substitution)
+        final eventDetail = event['event'] as String?;
+        final homeScore = event['score']?['home'] as int?;
+        final awayScore = event['score']?['away'] as int?;
+        
+        if (homeScore != null && awayScore != null) {
+          if (liveIndex != -1) {
+            final oldFixture = _liveFixtures[liveIndex];
+            _liveFixtures[liveIndex] = FixtureModel(
+              id: oldFixture.id,
+              referee: oldFixture.referee,
+              date: oldFixture.date,
+              timestamp: oldFixture.timestamp,
+              venue: oldFixture.venue,
+              city: oldFixture.city,
+              status: oldFixture.status,
+              league: oldFixture.league,
+              homeTeam: oldFixture.homeTeam,
+              awayTeam: oldFixture.awayTeam,
+              homeGoals: homeScore,
+              awayGoals: awayScore,
+              halftimeHome: oldFixture.halftimeHome,
+              halftimeAway: oldFixture.halftimeAway,
+            );
+          }
+          if (todayIndex != -1) {
+            final oldFixture = _todayFixtures[todayIndex];
+            _todayFixtures[todayIndex] = FixtureModel(
+              id: oldFixture.id,
+              referee: oldFixture.referee,
+              date: oldFixture.date,
+              timestamp: oldFixture.timestamp,
+              venue: oldFixture.venue,
+              city: oldFixture.city,
+              status: oldFixture.status,
+              league: oldFixture.league,
+              homeTeam: oldFixture.homeTeam,
+              awayTeam: oldFixture.awayTeam,
+              homeGoals: homeScore,
+              awayGoals: awayScore,
+              halftimeHome: oldFixture.halftimeHome,
+              halftimeAway: oldFixture.halftimeAway,
+            );
+          }
+          
+          notifyListeners();
+          print('⚽ Score updated: $homeScore - $awayScore ($eventDetail)');
+        }
+      }
+    } catch (e) {
+      print('❌ Error handling WebSocket event: $e');
+    }
+  }
+
+  /// Map short status codes to long descriptions
+  String _mapStatusShortToLong(String short) {
+    const statusMap = {
+      '1H': 'First Half',
+      'HT': 'Halftime',
+      '2H': 'Second Half',
+      'ET': 'Extra Time',
+      'P': 'Penalty',
+      'FT': 'Match Finished',
+      'AET': 'Match Finished After Extra Time',
+      'PEN': 'Match Finished After Penalty',
+      'BT': 'Break Time',
+      'SUSP': 'Match Suspended',
+      'INT': 'Match Interrupted',
+      'PST': 'Match Postponed',
+      'CANC': 'Match Cancelled',
+      'ABD': 'Match Abandoned',
+      'AWD': 'Technical Loss',
+      'WO': 'WalkOver',
+      'LIVE': 'In Progress',
+    };
+    return statusMap[short] ?? 'Unknown';
+  }
+
+  /// Subscribe to specific fixture for real-time updates
+  void subscribeToFixture(int fixtureId) {
+    _websocket.subscribeToFixture(fixtureId);
+  }
+
+  /// Unsubscribe from specific fixture
+  void unsubscribeFromFixture(int fixtureId) {
+    _websocket.unsubscribeFromFixture(fixtureId);
+  }
+
+  /// Disconnect WebSocket
+  Future<void> disconnectWebSocket() async {
+    await _websocket.disconnect();
+    await _websocketEventSubscription?.cancel();
+    await _connectionStatusSubscription?.cancel();
+    _connectionStatus = ConnectionStatus.disconnected;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _stopLiveMatchRefreshTimer();
+    disconnectWebSocket();
+    super.dispose();
   }
 }

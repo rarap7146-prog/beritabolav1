@@ -46,6 +46,7 @@ dependencies:
   
   # Push Notifications
   onesignal_flutter: ^5.2.7
+  flutter_local_notifications: ^18.0.1
   
   # Analytics & Tracking
   facebook_app_events: ^0.19.2
@@ -55,9 +56,14 @@ dependencies:
   
   # Local Storage
   shared_preferences: ^2.3.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.5
   
-  # HTTP
+  # Network
   http: ^1.2.0
+  connectivity_plus: ^6.1.0
+  web_socket_channel: ^3.0.1
   
   # UI Components
   cached_network_image: ^3.4.1

@@ -119,10 +119,28 @@ class LeagueConfig {
     logo: 'https://media.api-sports.io/football/leagues/61.png',
   );
 
-  static const ligaIndonesia = LeagueConfig(
+  static const uaeProLeague = LeagueConfig(
+    id: 301,
+    name: 'UAE Pro League',
+    logo: 'https://media.api-sports.io/football/leagues/301.png',
+  );
+
+  static const saudiProLeague = LeagueConfig(
+    id: 307,
+    name: 'Saudi Pro League',
+    logo: 'https://media.api-sports.io/football/leagues/307.png',
+  );
+
+  static const liga1Indonesia = LeagueConfig(
     id: 274,
-    name: 'Liga Indonesia',
+    name: 'Liga 1 Indonesia',
     logo: 'https://media.api-sports.io/football/leagues/274.png',
+  );
+
+  static const liga2Indonesia = LeagueConfig(
+    id: 275,
+    name: 'Liga 2 Indonesia',
+    logo: 'https://media.api-sports.io/football/leagues/275.png',
   );
 
   static const championsLeague = LeagueConfig(
@@ -137,15 +155,72 @@ class LeagueConfig {
     logo: 'https://media.api-sports.io/football/leagues/3.png',
   );
 
-  /// All featured leagues
+  static const conferenceLeague = LeagueConfig(
+    id: 848,
+    name: 'Conference League',
+    logo: 'https://media.api-sports.io/football/leagues/848.png',
+  );
+
+  static const worldCup = LeagueConfig(
+    id: 1,
+    name: 'World Cup',
+    logo: 'https://media.api-sports.io/football/leagues/1.png',
+  );
+
+  static const afcChampionsLeague = LeagueConfig(
+    id: 26,
+    name: 'AFC Champions League',
+    logo: 'https://media.api-sports.io/football/leagues/26.png',
+  );
+
+  static const copaLibertadores = LeagueConfig(
+    id: 31,
+    name: 'Copa Libertadores',
+    logo: 'https://media.api-sports.io/football/leagues/31.png',
+  );
+
+  static const superLigTurkey = LeagueConfig(
+    id: 203,
+    name: 'Süper Lig',
+    logo: 'https://media.api-sports.io/football/leagues/203.png',
+  );
+
+  static const eredivisie = LeagueConfig(
+    id: 88,
+    name: 'Eredivisie',
+    logo: 'https://media.api-sports.io/football/leagues/88.png',
+  );
+
+  static const ligaPortugal = LeagueConfig(
+    id: 94,
+    name: 'Liga Portugal',
+    logo: 'https://media.api-sports.io/football/leagues/94.png',
+  );
+
+  /// All featured leagues (matching LeagueFilterConfig whitelist)
   static const allLeagues = [
-    ligaIndonesia, // Indonesia first!
+    // Southeast Asian (Indonesia first!)
+    liga1Indonesia,
+    liga2Indonesia,
+    // Top European Leagues
     premierLeague,
     laLiga,
     serieA,
     bundesliga,
     ligue1,
+    ligaPortugal,
+    eredivisie,
+    superLigTurkey,
+    // European Competitions
     championsLeague,
     europaLeague,
+    conferenceLeague,
+    // Middle East
+    saudiProLeague,
+    uaeProLeague,
+    // International Competitions
+    worldCup,
+    afcChampionsLeague,
+    copaLibertadores,
   ];
 }

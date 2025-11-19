@@ -14,6 +14,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -48,4 +49,10 @@ flutter {
 dependencies {
     // Google Play Services - Advertising ID (Required for Facebook App Events)
     implementation("com.google.android.gms:play-services-ads-identifier:18.1.0")
+    
+    // Facebook SDK
+    implementation("com.facebook.android:facebook-android-sdk:16.2.0")
+    
+    // Core Library Desugaring (Required for flutter_local_notifications)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

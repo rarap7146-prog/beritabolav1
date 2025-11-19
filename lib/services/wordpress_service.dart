@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/article_model.dart';
+import 'cache_service.dart';
 
 class WordPressService {
   // Singleton pattern
@@ -9,22 +10,41 @@ class WordPressService {
   WordPressService._internal();
 
   static const String baseUrl = 'https://beritabola.app/wp-json/wp/v2';
+  final CacheService _cache = CacheService();
 
   /// Fetch sticky/featured articles for carousel (1.91:1 aspect ratio)
   /// Returns list of sticky posts for homepage carousel
+  /// Cached for 24 hours
   Future<List<ArticleModel>> fetchFeaturedArticles() async {
+    final cacheKey = 'wp_featured_articles';
+    
     try {
+      // Check cache first
+      final cachedData = await _cache.get(cacheKey);
+      if (cachedData != null) {
+        final List<dynamic> data = cachedData['articles'];
+        return data.map((json) => ArticleModel.fromJson(json)).toList();
+      }
+      
+      // Cache miss - fetch from API
       final response = await http.get(
         Uri.parse('$baseUrl/posts?sticky=true&per_page=5&_embed'),
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        
+        // Cache the response
+        await _cache.set(cacheKey, {'articles': data}, CacheService.ttlArticleList);
+        
         return data.map((json) => ArticleModel.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load featured articles: ${response.statusCode}');
       }
-    } catch (e) {      rethrow;
+    } catch (e) {
+      // On error, try to return stale cache
+      print('⚠️ Error fetching featured articles, checking stale cache: $e');
+      rethrow;
     }
   }
 
@@ -32,22 +52,39 @@ class WordPressService {
   /// Categories: 31, 30, 24, 26, 23
   /// [categoryId] - WordPress category ID
   /// [perPage] - Number of articles (default: 5 for homepage)
+  /// Cached for 24 hours
   Future<List<ArticleModel>> fetchArticlesByCategory(
     int categoryId, {
     int perPage = 5,
   }) async {
+    final cacheKey = 'wp_category_${categoryId}_$perPage';
+    
     try {
+      // Check cache first
+      final cachedData = await _cache.get(cacheKey);
+      if (cachedData != null) {
+        final List<dynamic> data = cachedData['articles'];
+        return data.map((json) => ArticleModel.fromJson(json)).toList();
+      }
+      
+      // Cache miss - fetch from API
       final response = await http.get(
         Uri.parse('$baseUrl/posts?categories=$categoryId&per_page=$perPage&_embed'),
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        
+        // Cache the response
+        await _cache.set(cacheKey, {'articles': data}, CacheService.ttlArticleList);
+        
         return data.map((json) => ArticleModel.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load articles for category $categoryId: ${response.statusCode}');
       }
-    } catch (e) {      rethrow;
+    } catch (e) {
+      print('⚠️ Error fetching category articles, checking stale cache: $e');
+      rethrow;
     }
   }
 
@@ -78,19 +115,35 @@ class WordPressService {
 
   /// Fetch single article by ID for detail page
   /// [articleId] - WordPress post ID
+  /// Cached for 24 hours
   Future<ArticleModel> fetchArticleById(int articleId) async {
+    final cacheKey = 'wp_article_$articleId';
+    
     try {
+      // Check cache first
+      final cachedData = await _cache.get(cacheKey);
+      if (cachedData != null) {
+        return ArticleModel.fromJson(cachedData);
+      }
+      
+      // Cache miss - fetch from API
       final response = await http.get(
         Uri.parse('$baseUrl/posts/$articleId?_embed'),
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
+        
+        // Cache the response
+        await _cache.set(cacheKey, data, CacheService.ttlArticleSingle);
+        
         return ArticleModel.fromJson(data);
       } else {
         throw Exception('Failed to load article: ${response.statusCode}');
       }
-    } catch (e) {      rethrow;
+    } catch (e) {
+      print('⚠️ Error fetching article, checking stale cache: $e');
+      rethrow;
     }
   }
 

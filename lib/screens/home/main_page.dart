@@ -307,6 +307,8 @@ class _SportsPageState extends State<SportsPage> {
                               final fixture = provider.liveFixtures[index];
                               return MatchCard(
                                 fixture: fixture,
+                                isRefreshing: provider.isRefreshingLive,
+                                showTrackButton: true, // Enable track button for live matches
                                 onTap: () {
                                   Navigator.push(
                                     context,

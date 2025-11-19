@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'screens/splash/splash_screen.dart';
@@ -11,18 +12,36 @@ import 'providers/football_provider.dart';
 import 'services/deep_link_service.dart';
 import 'services/onesignal_service.dart';
 import 'services/analytics_service.dart';
+import 'services/cache_service.dart';
+import 'services/live_match_notification_service.dart';
+import 'utils/app_logger.dart';
+import 'widgets/offline_indicator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Disable logging in production (release mode)
+  if (kReleaseMode) {
+    AppLogger.setEnabled(false);
+  }
+  
   // Initialize Firebase
   await Firebase.initializeApp();
   
-  // Initialize Analytics (Firebase Analytics, Facebook App Events, TikTok)
+  // Initialize Hive for caching
+  await CacheService().initialize();
+  
+  // Initialize Analytics (Firebase Analytics, Facebook App Events)
   await AnalyticsService().initialize();
+  
+  // Track app install/first open
+  await AnalyticsService().trackAppInstall();
   
   // Initialize OneSignal (after Firebase)
   await OneSignalService().initialize();
+  
+  // Initialize Live Match Notification Service
+  await LiveMatchNotificationService().initialize();
   
   // Initialize Deep Link Service
   DeepLinkService().initialize();
@@ -67,6 +86,9 @@ class BeritaBolaApp extends StatelessWidget {
         ),
       ),
       themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        return OfflineIndicator(child: child ?? const SizedBox());
+      },
       home: const SplashScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),

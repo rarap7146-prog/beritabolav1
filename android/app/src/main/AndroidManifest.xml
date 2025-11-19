@@ -3,6 +3,10 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     
     <!-- Queries for Android 11+ (Package Visibility) -->
     <queries>
@@ -29,7 +33,7 @@
     
     <application
         android:label="beritabola"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
@@ -87,6 +91,12 @@
         <meta-data
             android:name="com.facebook.sdk.ClientToken"
             android:value="@string/facebook_client_token"/>
+        <meta-data
+            android:name="com.facebook.sdk.AutoLogAppEventsEnabled"
+            android:value="@bool/facebook_auto_log_app_events_enabled"/>
+        <meta-data
+            android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
+            android:value="@bool/facebook_advertiser_id_collection_enabled"/>
         
         <!-- OneSignal Notification Icons -->
         <meta-data
@@ -98,6 +108,14 @@
         <meta-data
             android:name="com.onesignal.large_icon"
             android:resource="@mipmap/ic_launcher" />
+        
+        <!-- Foreground Service for Live Match Tracking -->
+        <service
+            android:name=".LiveMatchForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="dataSync" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
