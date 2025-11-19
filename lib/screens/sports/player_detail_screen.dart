@@ -136,6 +136,9 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
   Widget _buildPlayerHeader(bool isDark, ThemeData theme) {
     final player = _playerData!['player'] as Map<String, dynamic>;
     
+    // Get photo from loaded player data (API), fallback to widget parameter
+    final playerPhoto = (player['photo'] as String?) ?? widget.playerPhoto;
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -168,10 +171,10 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
             ),
             child: CircleAvatar(
               radius: 40,
-              backgroundImage: widget.playerPhoto.isNotEmpty
-                  ? CachedNetworkImageProvider(widget.playerPhoto)
+              backgroundImage: playerPhoto.isNotEmpty
+                  ? CachedNetworkImageProvider(playerPhoto)
                   : null,
-              child: widget.playerPhoto.isEmpty
+              child: playerPhoto.isEmpty
                   ? const Icon(Icons.person, size: 40)
                   : null,
             ),

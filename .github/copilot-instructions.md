@@ -79,8 +79,6 @@ lib/
 // Endpoints:
 // - GET /posts?per_page=10&page=1
 // - GET /posts/{id}
-// - GET /comments?post={id}
-// - POST /comments (with auth)
 ```
 
 **Important Notes**:

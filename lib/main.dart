@@ -8,10 +8,21 @@ import 'screens/home/main_page.dart';
 import 'providers/theme_provider.dart';
 import 'providers/article_provider.dart';
 import 'providers/football_provider.dart';
+import 'services/deep_link_service.dart';
+import 'services/onesignal_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
   await Firebase.initializeApp();
+  
+  // Initialize OneSignal (after Firebase)
+  await OneSignalService().initialize();
+  
+  // Initialize Deep Link Service
+  DeepLinkService().initialize();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -34,6 +45,7 @@ class BeritaBolaApp extends StatelessWidget {
     return MaterialApp(
       title: 'Berita Bola',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey, // For deep link navigation
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

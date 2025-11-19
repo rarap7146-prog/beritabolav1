@@ -1,0 +1,9 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.idnkt78.beritabola",
+    "sha256_cert_fingerprints":
+    ["BD:D9:B2:03:CE:A0:4E:C5:0D:90:BB:37:67:64:BB:C9:6E:7F:96:17:BF:52:44:C6:4D:89:B4:A8:E4:A3:BF:4B"]
+  }
+}]

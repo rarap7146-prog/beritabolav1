@@ -41,18 +41,28 @@
 - ✅ Player details
 
 ### 4. Push Notifications (OneSignal)
-- ✅ New article notifications
-- ✅ Match update notifications
-- ✅ Comment reply notifications
+- 🔄 New article notifications
+- 🔄 Match update notifications
+- 🔄 Comment reply notifications
 
-### 5. User Profile & Settings
+### 5. Deep Links (App Links & Custom Scheme)
+- ✅ Article deep links: `https://beritabola.app/article/{id}`
+- ✅ Custom scheme: `beritabola://article/{id}`
+- ✅ Domain verification (assetlinks.json)
+- ✅ Error handling (article not found → home with error chip)
+- ✅ Authentication integration (redirect to login if needed)
+- ✅ OneSignal notification integration ready
+- 🔄 Category deep links (future)
+- 🔄 Sports content deep links (future)
+
+### 6. User Profile & Settings
 - ✅ View profile
 - ✅ Link/unlink accounts
 - ✅ Set password for Google users
 - ✅ Dark/Light theme toggle
 - ✅ Notification preferences
 
-### 6. Future Features (Database Structure Ready)
+### 7. Future Features (Database Structure Ready)
 - 🔄 Bookmark/favorite articles
 - 🔄 Follow teams/players
 - 🔄 Search functionality
@@ -67,7 +77,8 @@ lib/
 ├── config/
 │   ├── app_config.dart               # API keys, endpoints
 │   ├── theme_config.dart             # Dark/Light theme
-│   └── route_config.dart             # App routes
+│   ├── route_config.dart             # App routes
+│   └── deep_link_config.dart         # Deep link patterns
 ├── models/
 │   ├── user_model.dart               # User data model
 │   ├── article_model.dart            # WordPress article
@@ -81,7 +92,8 @@ lib/
 │   ├── football_api_service.dart     # API-Football
 │   ├── firestore_service.dart        # Firestore CRUD
 │   ├── onesignal_service.dart        # Push notifications
-│   └── theme_service.dart            # Theme management
+│   ├── theme_service.dart            # Theme management
+│   └── deep_link_service.dart        # Deep link handling
 ├── providers/
 │   ├── auth_provider.dart            # Auth state management
 │   ├── theme_provider.dart           # Theme state

@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/article_provider.dart';
 import '../../providers/football_provider.dart';
+import '../../services/onesignal_service.dart';
 import '../../widgets/featured_articles_carousel.dart';
 import '../../widgets/netflix_style_category_list.dart';
 import '../../widgets/match_card.dart';
@@ -586,7 +587,77 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final authService = AuthService();
+  final oneSignalService = OneSignalService();
   bool _isLoading = false;
+  bool _notificationsEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreference();
+  }
+
+  Future<void> _loadNotificationPreference() async {
+    // Only load for authenticated users (not anonymous)
+    final user = authService.currentUser;
+    if (user != null && !user.isAnonymous) {
+      setState(() {
+        _notificationsEnabled = oneSignalService.areNotificationsEnabled;
+      });
+    }
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    // Only allow for authenticated users
+    final user = authService.currentUser;
+    if (user == null || user.isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap login terlebih dahulu untuk mengaktifkan notifikasi'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (value) {
+        await oneSignalService.enableNotifications();
+      } else {
+        await oneSignalService.disableNotifications();
+      }
+
+      setState(() {
+        _notificationsEnabled = value;
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? 'Notifikasi diaktifkan'
+                  : 'Notifikasi dinonaktifkan',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengubah pengaturan notifikasi: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _linkWithGoogle() async {
     setState(() => _isLoading = true);
@@ -1069,6 +1140,51 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // Notification Settings Card (only show for authenticated users)
+                  if (!isAnonymous) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.notifications_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Notifikasi Push',
+                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Terima update berita terbaru',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: _notificationsEnabled,
+                              onChanged: _toggleNotifications,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   
                   // About App Button

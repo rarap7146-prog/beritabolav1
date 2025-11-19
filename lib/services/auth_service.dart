@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'onesignal_service.dart';
 
 class AuthService {
   // Singleton pattern
@@ -11,6 +12,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final OneSignalService _oneSignal = OneSignalService();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -35,6 +37,9 @@ class AuthService {
 
       // Create Firestore user document
       await _createUserDocument(credential.user!);
+
+      // Set OneSignal external user ID
+      await _oneSignal.setExternalUserId(credential.user!.uid);
 
       return {
         'success': true,
@@ -67,6 +72,11 @@ class AuthService {
 
       // Update Firestore user document
       await _updateUserDocument(credential.user!);
+
+      // Set OneSignal external user ID (for authenticated users only)
+      if (!credential.user!.isAnonymous) {
+        await _oneSignal.setExternalUserId(credential.user!.uid);
+      }
 
       return {
         'success': true,
@@ -113,6 +123,9 @@ class AuthService {
 
       // Create/update Firestore user document
       await _createUserDocument(userCredential.user!);
+
+      // Set OneSignal external user ID
+      await _oneSignal.setExternalUserId(userCredential.user!.uid);
 
       return {
         'success': true,
@@ -322,6 +335,9 @@ class AuthService {
   /// Logout
   Future<void> logout() async {
     try {
+      // Remove OneSignal external user ID
+      await _oneSignal.removeExternalUserId();
+      
       await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {

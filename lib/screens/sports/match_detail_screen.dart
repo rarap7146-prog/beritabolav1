@@ -1460,7 +1460,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
     final name = player['name'] as String? ?? '';
     final number = player['number']?.toString() ?? '';
     final playerId = player['id'] as int?;
-    final photo = player['photo'] as String? ?? '';
+    // Note: Lineup API doesn't include photo field, pass empty string
+    final photo = '';
 
     // Get team info
     final team = isHome ? widget.fixture.homeTeam : widget.fixture.awayTeam;
@@ -1798,7 +1799,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
             final playerName = player['name'] ?? '';
             final playerNumber = player['number']?.toString() ?? '';
             final playerId = player['id'] as int?;
-            final playerPhoto = player['photo'] as String? ?? '';
+            // Note: Lineup API doesn't include photo field
+            final playerPhoto = '';
             
             // Get team info
             final teamModel = isHome ? widget.fixture.homeTeam : widget.fixture.awayTeam;
