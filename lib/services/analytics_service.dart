@@ -28,13 +28,17 @@ class AnalyticsService {
       // Firebase Analytics is automatically initialized with Firebase
       await _firebaseAnalytics.setAnalyticsCollectionEnabled(true);
 
-      // Facebook App Events - automatically initialized
-      // No explicit initialization needed for facebook_app_events package
+      // Facebook App Events - Enable advertiser tracking
+      await _facebookAppEvents.setAdvertiserTracking(enabled: true);
+      await _facebookAppEvents.setAutoLogAppEventsEnabled(true);
+      
+      // Flush events immediately (for testing)
+      await _facebookAppEvents.flush();
 
       _isInitialized = true;
       print('✅ Analytics initialized successfully');
       print('   ✓ Firebase Analytics: Ready');
-      print('   ✓ Facebook App Events: Ready');
+      print('   ✓ Facebook App Events: Ready (Advertiser Tracking Enabled)');
     } catch (e) {
       print('❌ Error initializing Analytics: $e');
     }
@@ -54,14 +58,14 @@ class AnalyticsService {
         await _firebaseAnalytics.setUserId(id: userId);
       }
 
-      // Facebook App Events
+      // Facebook App Events - Track as app activation/open
       await _facebookAppEvents.logEvent(
-        name: 'fb_mobile_login',
+        name: 'fb_mobile_activate_app',
         parameters: {
-          'method': method,
-          'user_id': userId ?? 'anonymous',
+          'fb_mobile_login_method': method,
         },
       );
+      await _facebookAppEvents.flush(); // Send immediately
 
       print('✅ Login event tracked successfully');
     } catch (e) {
@@ -83,14 +87,14 @@ class AnalyticsService {
         await _firebaseAnalytics.setUserId(id: userId);
       }
 
-      // Facebook App Events
+      // Facebook App Events - Standard CompleteRegistration event
       await _facebookAppEvents.logEvent(
         name: 'fb_mobile_complete_registration',
         parameters: {
-          'method': method,
-          'user_id': userId ?? 'unknown',
+          'fb_registration_method': method,
         },
       );
+      await _facebookAppEvents.flush(); // Send immediately
 
       print('✅ Registration event tracked successfully');
     } catch (e) {
@@ -160,6 +164,7 @@ class AnalyticsService {
           'content_category': contentCategory ?? contentType,
         },
       );
+      await _facebookAppEvents.flush(); // Send immediately
 
       print('✅ ViewContent event tracked successfully');
     } catch (e) {
@@ -241,7 +246,7 @@ class AnalyticsService {
       // Firebase Analytics
       await _firebaseAnalytics.logEvent(
         name: eventName,
-        parameters: parameters,
+        parameters: parameters?.cast<String, Object>(),
       );
 
       // Facebook App Events
@@ -289,10 +294,8 @@ class AnalyticsService {
         );
       }
 
-      // Facebook App Events - Set user ID
-      if (userId != null) {
-        await _facebookAppEvents.setUserId(userId);
-      }
+      // Note: Facebook App Events in version 0.19.7 doesn't support setUserId()
+      // User identification is handled automatically through the SDK
 
       print('✅ User properties set successfully');
     } catch (e) {
